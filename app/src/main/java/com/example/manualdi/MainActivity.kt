@@ -1,8 +1,12 @@
 package com.example.manualdi
 
+import android.animation.ObjectAnimator
 import android.os.Bundle
+import android.view.View
+import android.view.animation.OvershootInterpolator
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -32,20 +36,61 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.animation.doOnEnd
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.manualdi.presentation.MainViewModel
 import com.example.manualdi.ui.theme.ManualDITheme
 
 class MainActivity : ComponentActivity() {
+
+    private val viewModel by viewModels<MainViewModel>(
+        factoryProducer = {
+            viewModelFactory {
+                MainViewModel(ManualDIApp.appModule.authRepository)
+            }
+        }
+    )
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        installSplashScreen().apply {
+            setKeepOnScreenCondition {
+                !viewModel.abstractNetworkCallResponseChecker.value
+            }
+            setOnExitAnimationListener { screen ->
+                val zoomX = ObjectAnimator.ofFloat(
+                    screen.iconView,
+                    View.SCALE_X,
+                    0.4f,
+                    0.0f
+                )
+                zoomX.interpolator = OvershootInterpolator()
+                zoomX.duration = 500L
+                zoomX.doOnEnd { screen.remove() }
+                val zoomY = ObjectAnimator.ofFloat(
+                    screen.iconView,
+                    View.SCALE_Y,
+                    0.4f,
+                    0.0f
+                )
+                zoomY.interpolator = OvershootInterpolator()
+                zoomY.duration = 500L
+                zoomY.doOnEnd { screen.remove() }
+
+                zoomX.start()
+                zoomY.start()
+            }
+        }
+
         setContent {
             ManualDITheme {
-                val viewModel = viewModel<MainViewModel>(
-                    factory = viewModelFactory {
-                        MainViewModel(ManualDIApp.appModule.authRepository)
-                    }
-                )
+//                val viewModel = viewModel<MainViewModel>(
+//                    factory = viewModelFactory {
+//                        MainViewModel(ManualDIApp.appModule.authRepository)
+//                    }
+//                )
                 val response = viewModel.response.collectAsState()
                 val timer = viewModel.timer.collectAsState()
 

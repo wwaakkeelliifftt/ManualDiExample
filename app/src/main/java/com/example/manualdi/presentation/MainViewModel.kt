@@ -16,6 +16,15 @@ class MainViewModel(
     val response = MutableStateFlow("...")
     val timer = MutableStateFlow("00:00")
 
+    val abstractNetworkCallResponseChecker = MutableStateFlow(false)
+
+    init {
+        viewModelScope.launch {
+            delay(3000)
+            abstractNetworkCallResponseChecker.emit(true)
+        }
+    }
+
     fun login() {
         viewModelScope.launch {
             authRepository.login("test@test.com", "test123")
