@@ -39,8 +39,16 @@ import androidx.compose.ui.unit.sp
 import androidx.core.animation.doOnEnd
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.example.manualdi.appsearch.TodoAppSearchScreen
 import com.example.manualdi.presentation.MainViewModel
 import com.example.manualdi.ui.theme.ManualDITheme
+
+const val TIMER_SCREEN = "timer_screen"
+const val APP_SEARCH_SCREEN = "app_search_screen"
 
 class MainActivity : ComponentActivity() {
 
@@ -86,41 +94,20 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             ManualDITheme {
-//                val viewModel = viewModel<MainViewModel>(
-//                    factory = viewModelFactory {
-//                        MainViewModel(ManualDIApp.appModule.authRepository)
-//                    }
-//                )
-                val response = viewModel.response.collectAsState()
-                val timer = viewModel.timer.collectAsState()
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Yellow),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+                val navController = rememberNavController()
+                NavHost(
+                    navController = navController,
+                    startDestination = TIMER_SCREEN
                 ) {
-                    Spacer(modifier = Modifier.height(100.dp))
-                    Text(text = response.value, fontWeight = FontWeight.Light, fontSize = 24.sp)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(text = timer.value, fontWeight = FontWeight.Normal, fontSize = 18.sp)
-                    Spacer(modifier = Modifier.height(120.dp))
-                    Button(
-                        modifier = Modifier.width(200.dp),
-                        onClick = { viewModel.login() }
-                    ) {
-                        Row(
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Image(imageVector = Icons.Default.ExitToApp, contentDescription = null)
-                            Spacer(modifier = Modifier.width(20.dp))
-                            Text(text = "Log In", fontSize = 20.sp, fontWeight = FontWeight.Light, color = Color.Black)
-                        }
-
+                    composable(route = TIMER_SCREEN) {
+                        MainScreen(viewModel = viewModel, navController)
                     }
+                    composable(route = APP_SEARCH_SCREEN) {
+                        TodoAppSearchScreen(navController)
+                    }
+                    
                 }
+
 
             }
         }
@@ -128,23 +115,43 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun BodyScreen(
-    text: String = "...",
-    timer: String = "00:04"
+fun MainScreen(
+    viewModel: MainViewModel,
+    navController: NavController
 ) {
+    val response = viewModel.response.collectAsState()
+    val timer = viewModel.timer.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Cyan),
+            .background(Color.Yellow),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(text = text, fontWeight = FontWeight.Light, fontSize = 24.sp)
+        Spacer(modifier = Modifier.height(100.dp))
+        Text(text = response.value, fontWeight = FontWeight.Light, fontSize = 24.sp)
         Spacer(modifier = Modifier.height(12.dp))
-        Text(text = timer, fontWeight = FontWeight.Normal, fontSize = 18.sp)
-        Spacer(modifier = Modifier.height(12.dp))
-        Button(onClick = {  }, modifier = Modifier.width(200.dp)) {
-            Image(imageVector = Icons.Sharp.Share, contentDescription = null)
+        Text(text = timer.value, fontWeight = FontWeight.Normal, fontSize = 18.sp)
+        Spacer(modifier = Modifier.height(120.dp))
+        Button(
+            modifier = Modifier.width(200.dp),
+            onClick = { viewModel.login() }
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Image(imageVector = Icons.Default.ExitToApp, contentDescription = null)
+                Spacer(modifier = Modifier.width(20.dp))
+                Text(text = "Log In", fontSize = 20.sp, fontWeight = FontWeight.Light, color = Color.Black)
+            }
+        }
+        Button(
+            onClick = { navController.navigate(APP_SEARCH_SCREEN) },
+            modifier = Modifier.width(200.dp)
+        ) {
+            Text(text = "GO TO APP_SEARCH", fontSize = 16.sp, fontWeight = FontWeight.Thin)
         }
     }
 }
@@ -154,6 +161,6 @@ fun BodyScreen(
 @Composable
 fun GreetingPreview() {
     ManualDITheme {
-        BodyScreen()
+
     }
 }

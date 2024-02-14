@@ -20,7 +20,7 @@ class MainViewModel(
 
     init {
         viewModelScope.launch {
-            delay(3000)
+            delay(1700)
             abstractNetworkCallResponseChecker.emit(true)
         }
     }
