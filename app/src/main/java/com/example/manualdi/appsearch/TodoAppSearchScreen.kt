@@ -1,6 +1,5 @@
 package com.example.manualdi.appsearch
 
-import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -13,9 +12,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,16 +26,24 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -45,15 +52,28 @@ import androidx.navigation.NavController
 import com.example.manualdi.ManualDIApp
 import com.example.manualdi.viewModelFactory
 
+fun colorize(score: Int): Color {
+    return when (score) {
+        in 0..3 -> Color.Green
+        in 4..7 -> Color.Yellow
+        in 8..10 -> Color.Red
+        else -> Color.Cyan
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TodoAppSearchScreen(navController: NavController) {
+
     val viewModel = viewModel<AppSearchViewModel>(
         factory = viewModelFactory {
             AppSearchViewModel(ManualDIApp.appModule.todoSearchManager)
         }
     )
-    val context = LocalContext.current
     val state = viewModel.state
+
+    val sheetState = rememberModalBottomSheetState()
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -71,7 +91,6 @@ fun TodoAppSearchScreen(navController: NavController) {
 
         FunctionRow(
             vm = viewModel,
-            context = context,
             filterState = state.filter
         )
 
@@ -86,12 +105,26 @@ fun TodoAppSearchScreen(navController: NavController) {
                     todo = todo,
                     onDoneChange = { isDone ->
                         viewModel.onDoneChange(todo, isDone = isDone)
+                        Toast.makeText(context, "todo.score=${todo.score}", Toast.LENGTH_SHORT).show()
                     }
                 )
             }
         }
 
         BottomRow(navController, viewModel)
+
+        if (viewModel.isSheetOpen) {
+            CustomBottomSheet(
+                sheetState = sheetState,
+                action = {
+                    viewModel.addNewTodo()
+                },
+                onDismiss = {
+                    viewModel.closeBottomSheet()
+                },
+                viewModel = viewModel
+            )
+        }
     }
 }
 
@@ -99,27 +132,80 @@ fun TodoAppSearchScreen(navController: NavController) {
 fun TodoItem(
     todo: Todo,
     onDoneChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
 ) {
+    val rainbowColors: List<Color> = listOf(
+        Color.Red,
+        Color.Yellow,
+        Color.Green,
+        Color.Cyan,
+        Color.Blue,
+        Color.Magenta
+    )
+    val brush = remember {
+        Brush.linearGradient(colors = rainbowColors)
+    }
+
     Row(
       modifier = Modifier
           .fillMaxWidth()
-          .padding(8.dp)
+          .padding(3.dp)
+          .border(width = 1.dp, color = Color.DarkGray, shape = RoundedCornerShape(8.dp))
+          .padding(12.dp)
     ) {
         Column(
-            modifier = Modifier.weight(1f)
+            modifier = Modifier
+                .weight(1f)
+                .background(Color(0xFFF2EBFF))
         ) {
             Text(text = todo.title, fontSize = 16.sp)
-            Text(text = todo.text, fontSize = 12.sp)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = buildAnnotatedString {
+                    append("無題\n")
+                    withStyle(
+                        SpanStyle(brush = brush)
+                    ) {
+                        append(todo.text)
+                    }
+                },
+                fontSize = 12.sp,
+                style = TextStyle(
+                    lineHeight = 12.sp,
+//                    brush = brush
+                )
+            )
         }
-        Checkbox(checked = todo.isDone, onCheckedChange = onDoneChange)
+        Box {
+            Column(
+                modifier = Modifier.background(Color(0xFFC1FFF1)),
+                verticalArrangement = Arrangement.SpaceBetween,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .border(
+                            width = 3.dp,
+                            shape = RoundedCornerShape(8.dp),
+                            color = colorize(todo.score)
+                        )
+                        .padding(6.dp)
+                ) {
+                    Text(text = "${todo.score}")
+                }
+                Checkbox(
+                    checked = todo.isDone,
+                    onCheckedChange = onDoneChange,
+                    modifier = Modifier
+                )
+            }
+        }
+
     }
 }
 
 @Composable
 fun FunctionRow(
     vm: AppSearchViewModel,
-    context: Context,
     filterState: Int
 ) {
 
@@ -133,10 +219,7 @@ fun FunctionRow(
     ) {
         for (i in 0..3) {
             Button(
-                onClick = {
-                    vm.changeFilterState(use = i)
-//                    Toast.makeText(context, "use == $i", Toast.LENGTH_SHORT).show()
-                },
+                onClick = { vm.changeFilterState(use = i) },
                 colors = ButtonDefaults.textButtonColors(
                     contentColor = if (filterState == i) Color.DarkGray else Color.Red
                 ),
@@ -226,6 +309,7 @@ fun BottomRow(
                 tint = Color.Yellow,
                 modifier = Modifier.clickable {
                     // todo: open bottom sheet
+                    viewModel.openBottomSheet()
                 }
             )
         }

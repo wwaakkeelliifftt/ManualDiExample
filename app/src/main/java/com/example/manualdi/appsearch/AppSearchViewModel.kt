@@ -16,18 +16,22 @@ class AppSearchViewModel(
     private val todoSearchManager: TodoSearchManager
 ): ViewModel() {
 
-    var state by mutableStateOf(TodoListState())
-        private set
-
     private var searchJob: Job? = null
 
+    var state by mutableStateOf(TodoListState())
+        private set
+    var isSheetOpen by mutableStateOf(false)
+    var newTodo by mutableStateOf(Todo(namespace = "", id = "", score = 0, title = "", text = "", isDone = false))
+
     init {
-        demoFill()
+        viewModelScope.launch {
+            todoSearchManager.init()
+            onSearchQueryChange("")
+        }
     }
 
     fun demoFill() {
         viewModelScope.launch {
-            todoSearchManager.init()
             val todos = (1..100).map {
                 Todo(
                     namespace = TodoSearchManager.NAMESPACE_FILTER_FOR_SOME_USER,
@@ -87,9 +91,49 @@ class AppSearchViewModel(
         }
     }
 
+    fun openBottomSheet() {
+        isSheetOpen = true
+    }
+
+    fun closeBottomSheet() {
+        isSheetOpen = false
+    }
+
     override fun onCleared() {
         todoSearchManager.closeSession()
         super.onCleared()
+    }
+
+    fun holdNewTodoData(title: String = "", content: String = "", score: Int = 0) {
+        viewModelScope.launch {
+            newTodo = newTodo.copy(
+                score = score,
+                title = title,
+                text = content
+            )
+        }
+    }
+
+    fun addNewTodo() {
+        if (!isSheetOpen) return
+        if (newTodo.text.isBlank() || newTodo.title.isBlank()) return
+
+        viewModelScope.launch {
+            val newList = state.todos + Todo(
+                namespace = TodoSearchManager.NAMESPACE_FILTER_FOR_SOME_USER,
+                id = UUID.randomUUID().toString(),
+                score = newTodo.score,
+                title = newTodo.title,
+                text = newTodo.text,
+                isDone = false
+            )
+            val result = todoSearchManager.putTodos(newList)
+            if (result) {
+                newTodo = Todo("", "", 0, "", "", false)
+            }
+        }
+        onSearchQueryChange("")
+        closeBottomSheet()
     }
 
 }
